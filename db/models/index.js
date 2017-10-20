@@ -6,45 +6,20 @@
 	// This is an acceptable pattern but it does have limitations in that if you change the name of the model you will have to change every time it is required everywhere
 
 // This is also probably a good place for you to set up your associations
-var db = require('../index');
-var Sequelize = require('sequelize');
-
-var Students = db.define('Students', {
-	name: {
-		type: Sequelize.STRING,
-		allowNull: false,
-		isAlphanumeric: true
-	},
-	email: {
-		type: Sequelize.STRING,
-		allowNull: false,
-		validate: {
-			isEmail: true
-		}
-	},
-	campus: {
-		type: Sequelize.STRING,
-		allowNull: false
-	}
-});
-
-var Campuses = db.define('Campuses', {
-	name: {
-		type: Sequelize.STRING,
-		allowNull: false
-	},
-	image: {
-		type: Sequelize.STRING
-	},
-	students: {
-		type: Sequelize.ARRAY(Sequelize.STRING),
-	}
-});
 
 // Page.belongsTo(User, { as: 'author' });
 
+// register models
+const Campus = require('./Campus');
+const Student = require('./Student');
+
+Campus.hasMany(Student, {
+  onDelete: 'CASCADE'
+});
+
+Student.belongsTo(Campus);
+
 module.exports = {
-	Students,
-	Campuses,
-	db
-}
+	Campus,
+	Student
+};

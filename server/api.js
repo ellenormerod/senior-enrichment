@@ -1,36 +1,110 @@
 'use strict'
 const api = require('express').Router()
-const db = require('../db')
+const { Student, Campus } = require('../db/models')
 
-const Students = db.Students;
-const Campuses = db.Campuses;
+// const Students = db.Students;
+// const Campuses = db.Campuses;
 
-// If you aren't getting to this object, but rather the index.html (something with a joke) your path is wrong.
-	// I know this because we automatically send index.html for all requests that don't make sense in our backend.
-	// Ideally you would have something to handle this, so if you have time try that out!
-// api.get('/hello', (req, res) => res.send({hello: 'world'}))
+// api.use((req, res, next) => {
+//   res.status(404).send('Not found');
+// });
 
-api.get('/', function(req, res, next){
-	Campuses.findAll()
-		.then((campus) => res.render('home', {campuses: campus}))
+api.param('id', function (req, res, next, id) {
+  Student.findById(id, {
+		include: [Campus]
+	})
+  .then(function (student) {
+    if (!student) res.sendStatus(404);
+		req.student = student;
+    next();
+    return null;
+  })
+  .catch(next);
+});
+
+api.get('/campuses', function(req, res, next){
+	Campus.findAll({include: [Student]})
+		.then(campus => res.json(campus))
 		.catch(next)
 })
 
-api.get('/:campusId', function(req, res, next){
-	Campuses.findOne({
-        where: {
-            campusId: req.params.campusId
-        }
-	})
-	.then(function(campus){
-        res.render('campus', {campuses: campus})
-    })
-    .catch(next);
+api.get('/campuses/:campusId', function(req, res, next){
+	Campus.findById(req.params.campusId, {include: [Student]})
+		.then(campus => res.json(campus))
+  	.catch(next);
 })
 
 api.get('/students', function(req, res, next){
-	
+	Student.findAll({ include: [ Campus ] })
+		.then(students => res.json(students))
+		.catch(next)
 })
+
+api.get('/students/:studentId', function(req, res, next){
+	Student.findById(req.params.studentId, {include: [Campus]})
+		.then(student => res.json(student))
+})
+
+api.post('/campuses', function(req, res, next){
+	Campus.create(req.body)
+	.then(campus => res.json(campus))
+	.catch(next)
+})
+
+api.post('/students', function(req, res, next){
+	Campus.findOne({
+		where: {
+			name: req.body.campus
+		}
+	})
+	.then(campus => {
+		Student.create({
+			name: req.body.name,
+			email: req.body.email,
+			CampusId: campus.id
+		})
+			.then(student => {
+				return Student.findById(student.id, {
+					include: [Campus]
+				})
+			})
+			.then(student => {
+				res.json(student)
+			})
+			.catch(next)
+	})
+	.catch(next);
+})
+
+api.put('/campuses/:campusId', function (req, res, next) {
+  const campusId = req.params.campusId;
+  Campus.findById(campusId, {include: [Student]})
+		.then(campus => campus.update(req.body))
+		.then(info => res.json(info))
+    .catch(next);
+});
+
+api.put('/students/:id', function (req, res, next) {
+	req.student.update(req.body)
+		.then(student => {
+			res.json(student)
+		})
+    .catch(next);
+});
+
+api.delete('/campuses/:campusId', function (req, res, next) {
+  const id = req.params.campusId;
+  Campus.destroy({ where: { id } })
+    .then(() => res.status(204).end())
+    .catch(next);
+});
+
+api.delete('/students/:studentId', function (req, res, next) {
+  const id = req.params.studentId;
+  Student.destroy({ where: { id } })
+    .then(() => res.status(204).end())
+    .catch(next);
+});
 
 module.exports = api
 
